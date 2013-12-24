@@ -8,7 +8,7 @@
            [org.eclipse.jgit.revwalk RevCommit])
   (:require [clojure.string]))
 
-(declare diff-for-commit)
+(declare diff-for-commit diff-split-with)
 
 (def repo-path "/Users/grambo/src/rolepoint-app")
 
@@ -52,7 +52,23 @@
   (let [[item other] (split-with not-diff-header? remainder)]
     [(concat [line1 line2] item) other]))
 
+(defn- diff-for-commit
+  [^Git repo ^RevCommit rev-commit]
+  (if-let [parent (first (.getParents rev-commit))]
+    (let [stream (ByteArrayOutputStream.)]
+      (doto
+        (DiffFormatter. stream)
+        (.setRepository (.getRepository repo))
+        (.setDiffComparator RawTextComparator/DEFAULT)
+        (.setDetectRenames false)
+        (.format parent rev-commit))
+      (.toString stream))
+    ; TODO: Write the else branch of if-let (for the first commit)
+    ))
+
 (split-diff (diff-for-commit repo revision))
+
+(diff-for-commit repo revision)
 
 ; TODO: Could possibly refactor the splitting by using partition-by
 ;       or reduce as in
@@ -68,20 +84,6 @@
 ;       then determine what was "changed" afterwards.
 ;       Though not sure - context might be important for
 ;       finding changes.
-
-(defn- diff-for-commit
-  [^Git repo ^RevCommit rev-commit]
-  (if-let [parent (first (.getParents rev-commit))]
-    (let [stream (ByteArrayOutputStream.)]
-      (doto
-        (DiffFormatter. stream)
-        (.setRepository (.getRepository repo))
-        (.setDiffComparator RawTextComparator/DEFAULT)
-        (.setDetectRenames false)
-        (.format parent rev-commit))
-      (.toString stream))
-    ; TODO: Write the else branch of if-let (for the first commit)
-    ))
 
 (defn -main
   "I don't do a whole lot ... yet."

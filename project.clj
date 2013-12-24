@@ -6,4 +6,5 @@
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [clj-jgit "0.6.4"]
                  [clojurewerkz/neocons "2.0.0"]]
+  :profiles {:dev {:dependencies [[midje "1.5.1"]]}}
   :main stubbly.core)
