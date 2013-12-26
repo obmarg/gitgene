@@ -105,3 +105,23 @@
      :lines (parse-section sections)}))
 
 (parse-file-diff (first split-diffs))
+
+(defn parse-diff
+  "Takes a text diff, returns a set of changed line hashmaps.
+   {:filename :kind :line-num :contents"
+  [diff]
+  (->> diff
+       split-diff
+       (map parse-file-diff)
+       (mapcat (fn [file] (map
+                           #(assoc % :filename (:file file))
+                           (:lines file))))
+       set))
+
+(parse-diff (diff-for-commit repo revision))
+
+(def repo-and-rev->dict
+  "Takes a repository & revision, returns a set of changed line hashmaps"
+  (comp parse-diff diff-for-commit))
+
+(repo-and-rev->dict repo revision)
