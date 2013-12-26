@@ -1,7 +1,8 @@
 (ns stubbly.core
   (:gen-class)
   (:use [clj-jgit.porcelain :only [load-repo]]
-        [clj-jgit.querying :only [changed-files rev-list]])
+        [clj-jgit.querying :only [changed-files rev-list]]
+        [clojure.core.match :only [match]])
   (:import [java.io ByteArrayOutputStream]
            [org.eclipse.jgit.diff DiffFormatter RawTextComparator]
            [org.eclipse.jgit.api Git]
@@ -20,15 +21,20 @@
 
 (changed-files repo revision)
 
-(def diff-header?
-  (partial re-matches #"^diff --git.*$"))
+(def header-regexp #"^diff --git a/(.*) b/(.*)$")
+(def section-header-regexp #"^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$")
+
+(defn- partition-by-re
+  [regexp input]
+  (partition-by #(re-matches regexp %) input))
 
 (defn split-diff
-  [data]
-  (->> data
+  [input]
+  (->> input
        clojure.string/split-lines
-       (partition-by diff-header?)
-       (partition 2)))
+       (partition-by-re header-regexp)
+       (partition 2)
+       (map flatten)))
 
 (defn- diff-for-commit
   [^Git repo ^RevCommit rev-commit]
@@ -44,18 +50,61 @@
     ; TODO: Write the else branch of if-let (for the first commit)
     ))
 
-(split-diff (diff-for-commit repo revision))
+(def split-diffs (split-diff (diff-for-commit repo revision)))
 
-; Ok, so this gives me a seq of individual diff chunks.
-; From this I need to extract:
-;   - File details (trivial)
-;   - Lines added (easy enough)
-;   - Lines removed (easy enough)
-;   - Lines changed (HARD)
-;     - Probably want to just do added vs removed first,
-;       then determine what was "changed" afterwards.
-;       Though not sure - context might be important for
-;       finding changes.
+(defn split-diff-sections
+  [input]
+  (->> input
+       (partition-by-re section-header-regexp)
+       (drop 1)
+       (partition 2)
+       (flatten)))
+
+(split-diff-sections (second split-diffs))
+(map split-diff-sections split-diffs)
+
+(defn- parse-line
+  [[first-char & rest-line]]
+  (let [kind (match [first-char]
+                    [\+]  :added
+                    [\-]  :removed
+                    :else :context)]
+    {:contents (if (= kind :context)
+                 (str first-char (apply str rest-line))
+                 (apply str rest-line))
+     :kind kind}))
+
+(defn- remove-kind [kind lines]
+  (remove #(= kind (:kind %)) lines))
+
+(defn parse-section
+  "Parses a section into a list of changed lines"
+  [[section-header & diff-lines]]
+  (let [[_ a-start a-len b-start b-len] (re-matches section-header-regexp
+                                                    section-header)
+        lines (map parse-line diff-lines)
+        [added removed] ((juxt #(remove-kind :removed %)
+                              #(remove-kind :added %))
+                         lines)
+        linenum-fn (fn [lines start-index]
+                     (map-indexed
+                      #(assoc %2 :line-num (+ %1 (Integer. start-index)))
+                      lines))]
+    (set (remove #(= :context (:kind %))
+      (concat (linenum-fn added b-start)
+              (linenum-fn removed a-start))))))
+
+(def section (split-diff-sections (first split-diffs)))
+
+(parse-section section)
+(defn parse-file-diff
+  "Parses a single diff for a file into a description hash"
+  [[header-line & other-lines]]
+  (let [sections (split-diff-sections other-lines)]
+    {:file (second (re-matches header-regexp header-line))
+     :lines (parse-section sections)}))
+
+(parse-file-diff (first split-diffs))
 
 (defn -main
   "I don't do a whole lot ... yet."

@@ -29,8 +29,18 @@ index d75c820..6297bd9 100644
 (def ^:private test-diff-lines
   (clojure.string/split-lines test-diff))
 
-(fact "Split diff splits diffs into seqs of (header, lines)"
-  (split-diff test-diff) => (->> test-diff
-                                 (clojure.string/split-lines)
-                                 (split-at 10)
-                                 (map #(split-at 1 %))))
+(fact "split-diff splits diffs into seqs of (header, lines)"
+  (split-diff test-diff) => (split-at 10 test-diff-lines))
+
+(fact "split-diff-sections splits out a seq of sections"
+  (split-diff-sections (take 10 test-diff-lines))
+      => (drop 4 (take 10 test-diff-lines)))
+
+(fact "parse-section returns added & removed lines with indexes"
+  (parse-section (drop 14 test-diff-lines))
+      => #{{:kind :removed
+            :line-num 2
+            :contents "  (:use clojure.test"}
+           {:kind :added
+            :line-num 2
+            :contents "  (:use midje.sweet"}})
