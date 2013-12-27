@@ -4,7 +4,7 @@
   (:import [org.neo4j.test TestGraphDatabaseFactory]
            [org.neo4j.cypher.javacompat ExecutionEngine]))
 
-(declare create-database)
+(declare create-database execute-query)
 
 (def test-data
   "
@@ -56,7 +56,10 @@
   routes-[:CONTAINS]->routes_l7,
 
   g_commit1-[:ADDED_LINE]->config_l1,
+
   g_commit2-[:ADDED_LINE]->config_l2,
+
+  g_commit3-[:REMOVED_LINE]->config_l2,
   g_commit3-[:ADDED_LINE]->config_l3,
   g_commit3-[:ADDED_LINE]->routes_l1,
   g_commit3-[:ADDED_LINE]->routes_l2,
@@ -65,24 +68,12 @@
   j_commit1-[:ADDED_LINE]->routes_l4,
   j_commit1-[:ADDED_LINE]->routes_l5,
   j_commit1-[:ADDED_LINE]->routes_l6,
-  j_commit2-[:ADDED_LINE]->routes_l7
+
+  j_commit2-[:REMOVED_LINE]->routes_l6,
+  j_commit2-[:ADDED_LINE]->routes_l7,
+  j_commit2-[:REMOVED_LINE]->routes_l1
   ")
 
-(def test-query (atom nil))
-
-; TODO: Ideally I need to source these queries from somewhere.
-;       so I'm testing the actual application queries in here...
-
-(with-state-changes [(before :facts (reset! test-query
-                                            (partial execute-query
-                                                     (create-database test-data))))]
-  (fact "We should be able to find how many lines each user has added"
-        (@test-query "MATCH c-[:ADDED_LINE]->l, c-[:AUTHOR]->a
-                     RETURN a.name AS name, COUNT(l) AS num")
-        => (just #{{"name" "Graeme"
-                    "num" 6}
-                   {"name" "James"
-                    "num" 4}})))
 
 (defn- execute-query
   "Executes a cypher query and returns the results.
@@ -99,3 +90,97 @@
         engine (ExecutionEngine. db)]
     (.execute engine cypher)
     db))
+
+(def test-query (atom nil))
+
+; TODO: Ideally I need to source these queries from somewhere.
+;       so I'm testing the actual application queries in here...
+
+(with-state-changes [(before :facts (reset! test-query
+                                            (partial execute-query
+                                                     (create-database test-data))))]
+  (fact "We should be able to find how many lines each user has added"
+        (@test-query "MATCH c-[:ADDED_LINE]->l, c-[:AUTHOR]->a
+                      RETURN a.name AS name, COUNT(l) AS num")
+        => (just #{{"name" "Graeme"
+                    "num" 6}
+                   {"name" "James"
+                    "num" 4}}))
+
+  (fact "We should be able to find how many lines a particular user has added"
+        (@test-query "MATCH c-[:ADDED_LINE]->l, c-[:AUTHOR]->a
+                      WHERE a.name = 'Graeme'
+                      RETURN a.name AS name, COUNT(l) AS num")
+        => [{"name" "Graeme"
+             "num" 6}])
+
+  (fact "We should be able to find how many lines each user has removed"
+        (@test-query "MATCH c-[:REMOVED_LINE]->l, c-[:AUTHOR]->a
+                      RETURN a.name AS name, COUNT(l) AS num")
+        => (just #{{"name" "Graeme"
+                    "num" 1}
+                   {"name" "James"
+                    "num" 2}}))
+
+  (fact "We should be able to find how many lines a particular user has removed"
+        (@test-query "MATCH c-[:REMOVED_LINE]->l, c-[:AUTHOR]->a
+                      WHERE a.name = 'Graeme'
+                      RETURN a.name AS name, COUNT(l) AS num")
+        => [{"name" "Graeme"
+             "num" 1}])
+
+  (fact "We should be able to see how many files people touched"
+        (@test-query "MATCH c-[:ADDED_LINE|:REMOVED_LINE]->l<-[:CONTAINS]-f,
+                            c-[:AUTHOR]->a
+                      RETURN a.name AS name, COUNT(DISTINCT f) AS num")
+        => (just #{{"name" "Graeme"
+                    "num" 2}
+                   {"name" "James"
+                    "num" 1}}))
+
+  (fact "We should be able to see what files are changed the most"
+        (@test-query "MATCH c-[:ADDED_LINE|:REMOVED_LINE]->l<-[:CONTAINS]-f
+                      RETURN f.name AS name, COUNT(DISTINCT l) AS num")
+        => (just #{{"name" "config.py"
+                    "num" 3}
+                   {"name" "routes.py"
+                    "num" 7}}))
+
+  (fact "We should be able to see who changed how many lines per file"
+        (@test-query "MATCH c-[:ADDED_LINE|:REMOVED_LINE]->l<-[:CONTAINS]-f,
+                            c-[:AUTHOR]->a
+                      RETURN a.name AS author, f.name AS file,
+                             COUNT(DISTINCT l) AS num")
+        => (just #{{"author" "Graeme"
+                    "file" "routes.py"
+                    "num" 3}
+                   {"author" "Graeme"
+                    "file" "config.py"
+                    "num" 3}
+                   {"author" "James"
+                    "file" "routes.py"
+                    "num" 5}}))
+
+  (fact "We should be able to see who's code is removed the most"
+        (@test-query "MATCH c-[:REMOVED_LINE]->l<-[:ADDED_LINE]-c2-[:AUTHOR]->a
+                      RETURN a.name AS name, COUNT(l) AS num")
+        => (just #{{"name" "Graeme"
+                    "num" 2}
+                   {"name" "James"
+                    "num" 1}}))
+
+  (fact "We should be able to see who replaces other peoples code"
+        (@test-query "MATCH c-[:REMOVED_LINE]->l<-[:ADDED_LINE]-c2-[:AUTHOR]->add_a,
+                            c-[:AUTHOR]->rem_a
+                      WHERE rem_a <> add_a
+                      RETURN add_a.name AS author, rem_a.name AS remover,
+                             COUNT(DISTINCT l) AS num")
+        => (just #{{"author" "Graeme"
+                    "remover" "James"
+                    "num" 1}}))
+
+  (fact "How many lines in current code base"
+        (@test-query "MATCH (l:Line)
+                      WHERE not(l<-[:REMOVED_LINE]-())
+                      RETURN COUNT(DISTINCT l) AS count")
+        => (just [{"count" 7}])))
