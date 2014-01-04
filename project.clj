@@ -11,5 +11,6 @@
                                   [org.neo4j/neo4j-kernel "2.0.0"]
                                   [org.neo4j/neo4j-kernel "2.0.0"
                                    :classifier "tests"]
-                                  [org.neo4j/neo4j-cypher "2.0.0"]]}}
+                                  [org.neo4j/neo4j-cypher "2.0.0"]
+                                  [org.clojure/core.async "0.1.267.0-0d7780-alpha"]]}}
   :main stubbly.core)

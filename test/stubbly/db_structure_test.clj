@@ -6,6 +6,8 @@
 
 (declare create-database execute-query)
 
+; TODO: Going to need to add support for multiple projects
+;       to this db structure.
 (def test-data
   "
   CREATE
@@ -19,6 +21,7 @@
                 path: 'another/path/routes.py',
                 type: 'python'}),
 
+  ; TODO: Could make dates into a graph for nice querying of them.
   (g_commit1:Commit {date: 'sometime'}),
   (g_commit2:Commit {date: 'some-other-time'}),
   (g_commit3:Commit {date: 'blah'}),
