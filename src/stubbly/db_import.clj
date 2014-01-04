@@ -12,6 +12,37 @@
 (def ^:private wait-all!! (partial map async/<!!))
 (def ^:private wait-all! (partial map async/<!))
 
+(def ^:private file-cache (agent {}))
+
+(defn- file-from-db
+  "Finds or creates a file node in the db"
+  [file]
+  (if-let [node (first (nl/get-all-nodes "File" :name (:name file)))]
+    node
+    (let [node (nn/create file)]
+      (nl/add node "File")
+      node)))
+
+(defn- find-file
+  "Finds the node for a file, or creates it if it doesn't exist.
+   Uses an agent to ensure proper coordination."
+  [file]
+  (let [filename (:name file)]
+    (if-let [node (@file-cache filename)]
+      node
+      (do
+        (send-off file-cache
+                  (fn [oldval]
+                    (if-not (oldval filename)
+                      (assoc oldval filename (file-from-db filename))
+                      oldval)))
+        ; Note: await can block if agent errors, so watch out for
+        ;       that.
+        (await file-cache)
+        (@file-cache filename)))))
+
+(find-file {:name "Testfile.txt"})
+
 (defn- process-line
   "Labels a line node & adds its relationships"
   [commit line-node line]
