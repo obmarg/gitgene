@@ -1,5 +1,6 @@
 (ns stubbly.db-import
-  (:require [clojurewerkz.neocons.rest.nodes :as nn]
+  (:require [clojure.string :as string]
+            [clojurewerkz.neocons.rest.nodes :as nn]
             [clojurewerkz.neocons.rest.relationships :as nrel]
             [clojurewerkz.neocons.rest.labels :as nl]
             [clojure.core.async :as async]))
@@ -16,41 +17,37 @@
 
 (defn- file-from-db
   "Finds or creates a file node in the db"
-  [file]
-  (if-let [node (first (nl/get-all-nodes "File" :name (:name file)))]
+  [filename]
+  (if-let [node (first (nl/get-all-nodes "File" :path filename))]
     node
-    (let [node (nn/create file)]
+    (let [node (nn/create {:name (last (string/split filename #"/"))
+                           :path filename
+                           :type (last (string/split filename #"\."))})]
       (nl/add node "File")
       node)))
 
 (defn- find-file
   "Finds the node for a file, or creates it if it doesn't exist.
    Uses an agent to ensure proper coordination."
-  [file]
-  (let [filename (:name file)]
-    (if-let [node (@file-cache filename)]
-      node
-      (do
-        (send-off file-cache
-                  (fn [oldval]
-                    (if-not (oldval filename)
-                      (assoc oldval filename (file-from-db filename))
-                      oldval)))
-        ; Note: await can block if agent errors, so watch out for
-        ;       that.
-        (await file-cache)
-        (@file-cache filename)))))
-
-(find-file {:name "Testfile.txt"})
+  [filename]
+  (if-let [node nil]
+    node
+    (do
+      (send-off file-cache
+                (fn [oldval]
+                  (if (oldval filename)
+                    oldval
+                    (assoc oldval filename (file-from-db filename)))))
+      (await-for 500 file-cache)
+      (@file-cache filename))))
 
 (defn- process-line
   "Labels a line node & adds its relationships"
   [commit line-node line]
   (nl/add line-node "Line")
   (nrel/create commit line-node (line-relationship (:kind line)))
+  (nrel/create (find-file (:filename line)) line-node :CONTAINS)
   nil)
-  ; TODO:
-  ;   Add the CONTAINS relationship (which requires getting the file)
 
 ; TODO: Need to filter out certain properties before setting on the
 ;       server.
@@ -62,14 +59,17 @@
   (nl/add commit "Commit")
   ; TODO: This is a bit shit - need a "find or create" for lines,
   ;       because removed lines should already be in the database.
-  ;       This might mean we need a cache of lines (at least ideally)
+  ;       This might mean we need a cache of lines (at least ideally).
   ;
-  ;       Also need to be able to locate lines in the database by
-  ;       finding lines that
+  ;       Also need to be able to locate lines in the database somehow,
+  ;       probably using linenum & file.
   (let [line-nodes (nn/create-batch lines)]
     (wait-all!!
      (for [[node line] (map vector line-nodes lines)]
-         (async/go (process-line commit node line))))))
+       ; TODO: Seperate threads per line is almost definitely
+       ;       overkill, might even slow things down.
+       ;       Maybe look into making this better...
+       (async/thread (process-line commit node line))))))
 
 (defn add-commits
   "Bulk adds some commits to the database.
@@ -78,10 +78,9 @@
   (let [nodes (nn/create-batch (map first commits))]
     (wait-all!!
      (for [[node lines] (map vector nodes (map second commits))]
-       ; TODO: async/thread or future may be better here...
-      (async/go (process-commit node lines))))))
+      (async/thread (process-commit node lines))))))
 
 (def test-commits [[{:name "TEST"} #{{:name "Line 1" :kind :added}
                                      {:name "Line 2" :kind :removed}}]])
 
-; (add-commits test-commits)
+(add-commits test-commits)
