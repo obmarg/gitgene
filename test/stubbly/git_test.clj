@@ -39,23 +39,23 @@ index d75c820..6297bd9 100644
 (fact "parse-section returns added & removed lines with indexes"
   (parse-section (drop 14 test-diff-lines))
       => #{{:kind :removed
-            :line-num 2
+            :linenum 2
             :contents "  (:use clojure.test"}
            {:kind :added
-            :line-num 2
+            :linenum 2
             :contents "  (:use midje.sweet"}})
 
 (fact "parse-diff takes a diff and returns added & removed lines with indexes"
  (parse-diff test-diff)
       => #{{:kind :removed
-            :line-num 2
+            :linenum 2
             :filename "test/stubbly/core_test.clj"
             :contents "  (:use clojure.test"}
            {:kind :added
-            :line-num 2
+            :linenum 2
             :filename "test/stubbly/core_test.clj"
             :contents "  (:use midje.sweet"}
            {:kind :added
-            :line-num 9
+            :linenum 9
             :filename "project.clj"
             :contents "  :profiles {:dev {:dependencies [[midje \"1.5.1\"]]}}"}})

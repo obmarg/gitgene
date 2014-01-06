@@ -88,7 +88,7 @@
                          lines)
         linenum-fn (fn [lines start-index]
                      (map-indexed
-                      #(assoc %2 :line-num (+ %1 (Integer. start-index)))
+                      #(assoc %2 :linenum (+ %1 (Integer. start-index)))
                       lines))]
     (set (remove #(= :context (:kind %))
       (concat (linenum-fn added b-start)
@@ -108,7 +108,7 @@
 
 (defn parse-diff
   "Takes a text diff, returns a set of changed line hashmaps.
-   {:filename :kind :line-num :contents"
+   {:filename :kind :linenum :contents"
   [diff]
   (->> diff
        split-diff

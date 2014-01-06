@@ -8,6 +8,7 @@
 
 ; TODO: Going to need to add support for multiple projects
 ;       to this db structure.
+; TODO: Could make dates into a graph for nice querying of them.
 (def test-data
   "
   CREATE
@@ -21,7 +22,6 @@
                 path: 'another/path/routes.py',
                 type: 'python'}),
 
-  ; TODO: Could make dates into a graph for nice querying of them.
   (g_commit1:Commit {date: 'sometime'}),
   (g_commit2:Commit {date: 'some-other-time'}),
   (g_commit3:Commit {date: 'blah'}),
@@ -29,17 +29,17 @@
   (j_commit1:Commit {date: 'sometime'}),
   (j_commit2:Commit {date: 'some-other-time'}),
 
-  (config_l1:Line {contents: 'import os'}),
-  (config_l2:Line {contents: 'config = SOMETHING'}),
-  (config_l3:Line {contents: 'config = SOMETHINGELSE'}),
+  (config_l1:Line {contents: 'import os', linenum: 1}),
+  (config_l2:Line {contents: 'config = SOMETHING', linenum: 2}),
+  (config_l3:Line {contents: 'config = SOMETHINGELSE', linenum: 2}),
 
-  (routes_l1:Line {contents: 'import config'}),
-  (routes_l2:Line {contents: 'import flask'}),
-  (routes_l3:Line {contents: 'app = flask()'}),
-  (routes_l4:Line {contents: '@app.route(a_route, type=POST)'}),
-  (routes_l5:Line {contents: 'def a_route(params):'}),
-  (routes_l6:Line {contents: '    return hello world'}),
-  (routes_l7:Line {contents: '    return something else'}),
+  (routes_l1:Line {contents: 'import config', linenum: 1}),
+  (routes_l2:Line {contents: 'import flask', linenum: 2}),
+  (routes_l3:Line {contents: 'app = flask()', linenum:3 }),
+  (routes_l4:Line {contents: '@app.route(a_route, type=POST)', linenum: 4}),
+  (routes_l5:Line {contents: 'def a_route(params):', linenum: 5}),
+  (routes_l6:Line {contents: '    return hello world', linenum: 6}),
+  (routes_l7:Line {contents: '    return something else', linenum: 6}),
 
   g_commit1-[:AUTHOR]->graeme,
   g_commit2-[:AUTHOR]->graeme,
