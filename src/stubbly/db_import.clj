@@ -50,19 +50,26 @@
    (:self value)   (records/instantiate-node-from value)
    :else           value))
 
+(defn- except-if-nil
+  [value message]
+  (if-not value
+    (throw (Exception. message))
+    value))
+
 (defn- find-line
   "Finds the node for a line"
   [{:keys [filename linenum]}]
   (-> (cy/tquery "MATCH (f:File)-[:CONTAINS]->(l:Line)
-                 WHERE f.path={path} AND
-                       not(l<-[:REMOVED_LINE]-()) AND
-                       l.linenum={linenum}
-                 RETURN l AS line"
+                  WHERE f.path={path} AND
+                        not(l<-[:REMOVED_LINE]-()) AND
+                        l.linenum={linenum}
+                  RETURN l AS line"
                 {:path filename
                  :linenum linenum})
       first
       (get "line")
-      cypher-convert-value))
+      cypher-convert-value
+      (except-if-nil (str "Could not find" filename linenum))))
 
 (defn- relate-line-to-commit
   "Labels a line node & adds its relationships"
@@ -86,14 +93,20 @@
   "Labels a commit node and adds the appropriate lines.
    Intended to be used from witin a channel."
   [commit lines]
-  (nl/add commit "Commit")
-  (let [{:keys [added removed]} (group-by :kind lines)
-        added-nodes (nn/create-batch added)
-        removed-nodes (map find-line removed)
-        relate-line #(nrel/create commit %1 %2)]
-    (eager-map process-new-line added-nodes added)
-    (eager-map #(relate-line % :ADDED_LINE) added-nodes)
-    (eager-map #(relate-line % :REMOVED_LINE) removed-nodes)))
+  (try
+    (nl/add commit "Commit")
+    (let [{:keys [added removed]} (group-by :kind lines)
+          added-nodes (nn/create-batch added)
+          removed-nodes (map find-line removed)
+          relate-line #(nrel/create commit %1 %2)]
+      (eager-map process-new-line added-nodes added)
+      (eager-map #(relate-line % :ADDED_LINE) added-nodes)
+      (eager-map #(relate-line % :REMOVED_LINE) removed-nodes))
+    (catch Exception e (throw (Exception.
+                               (str "Error processing commit" (:data commit))
+                               e)))))
+
+
 
 (defn add-commits
   "Bulk adds some commits to the database.
