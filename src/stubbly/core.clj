@@ -14,7 +14,8 @@
 ;(first commit)
 ; (map println (sort-by :linenum (second commit)))
 
-;(import-to-db "/Users/grambo/src/stubbly")
+; TODO: This returns a seq of nils for all commits.  No need to do that...
+(import-to-db "/Users/grambo/src/stubbly")
 
 (defn -main
   "I don't do a whole lot ... yet."

@@ -58,18 +58,22 @@
 
 (defn- find-line
   "Finds the node for a line"
-  [{:keys [filename linenum]}]
+  [{:keys [filename contents]}]
+  ; TODO: At present this probably won't handle
+  ;       branches too well, beacuse a line can be removed more than
+  ;       once on different branches.  Fix this.
+  ; TODO: Also won't handle files with multiple lines of the same contents
   (-> (cy/tquery "MATCH (f:File)-[:CONTAINS]->(l:Line)
                   WHERE f.path={path} AND
                         not(l<-[:REMOVED_LINE]-()) AND
-                        l.linenum={linenum}
+                        l.contents={contents}
                   RETURN l AS line"
                 {:path filename
-                 :linenum linenum})
+                 :contents contents})
       first
       (get "line")
       cypher-convert-value
-      (except-if-nil (str "Could not find" filename linenum))))
+      (except-if-nil (str "Could not find line in " filename "containing" contents))))
 
 (defn- relate-line-to-commit
   "Labels a line node & adds its relationships"
