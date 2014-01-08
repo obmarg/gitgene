@@ -14,7 +14,7 @@
 ;(first commit)
 ; (map println (sort-by :linenum (second commit)))
 
-(import-to-db "/Users/grambo/src/gitgene")
+; (import-to-db "/Users/grambo/src/gitgene")
 
 (defn -main
   "I don't do a whole lot ... yet."
