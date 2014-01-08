@@ -12,18 +12,36 @@
   ((keyword kind) {:added :ADDED_LINE
                    :removed :REMOVED_LINE}))
 
+; TODO: Maybe get rid of this.  Having a cache is actually more
+;       of a pain in the arse than it's worth just now.
+;       A lesson in naming things and cache invalidation.
 (def ^:private file-cache (agent {}))
+
+(defn- find-or-create
+  "Finds or creates a node with label & properties"
+  [label key-prop properties]
+  (if-let [node (first (nl/get-all-nodes label
+                                         key-prop
+                                         (key-prop properties)))]
+    node
+    (doto
+      (nn/create properties)
+      (nl/add label))))
 
 (defn- file-from-db
   "Finds or creates a file node in the db"
   [filename]
-  (if-let [node (first (nl/get-all-nodes "File" :path filename))]
-    node
-    (let [node (nn/create {:name (last (string/split filename #"/"))
-                           :path filename
-                           :type (last (string/split filename #"\."))})]
-      (nl/add node "File")
-      node)))
+  (find-or-create
+   "File" :path {:name (last (string/split filename #"/"))
+                 :path filename
+                 :type (last (string/split filename #"\."))}))
+
+(defn- find-author
+  "Finds or creates an author in the db"
+  [{:keys [author email]}]
+  (find-or-create
+   "User" :email {:email email
+                  :name author}))
 
 (defn- find-file
   "Finds the node for a file, or creates it if it doesn't exist.
@@ -80,6 +98,11 @@
   [commit kind line]
   (nrel/create commit line kind))
 
+(defn- add-author-to-commit
+  "Finds an author and relates the commit to it."
+  [commit]
+  (nrel/create commit (find-author (:data commit)) :AUTHOR))
+
 (defn- process-new-line
   "Labels a line node & links it to its file"
   [line-node line]
@@ -99,6 +122,7 @@
   [commit lines]
   (try
     (nl/add commit "Commit")
+    (add-author-to-commit commit)
     (let [{:keys [added removed]} (group-by :kind lines)
           added-nodes (nn/create-batch added)
           removed-nodes (map find-line removed)
@@ -117,7 +141,7 @@
    Expects [[commit-details, lines]...]"
   [commits]
   (let [nodes (nn/create-batch (map first commits))]
-    (map process-commit nodes (map second commits))))
+    (eager-map process-commit nodes (map second commits))))
 
 ;(def test-commits [[{:name "TEST"} #{{:name "Line 1" :kind :added :linenum 1
 ;                                      :filename "test.txt"}
