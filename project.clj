@@ -8,17 +8,22 @@
                  [clj-jgit "0.6.4"]
                  [clojurewerkz/neocons "2.0.0"]
                  [org.clojure/core.match "0.2.0"]
-                 [org.clojure/clojurescript "0.0-2138"]]
+                 [compojure "1.1.6"]
+                 [org.clojure/clojurescript "0.0-2138"]
+                 [ring "1.2.1"]
+                 [hiccup "1.0.4"]]
   :profiles {:dev {:dependencies [[midje "1.5.1"]
                                   #_[org.neo4j/neo4j-kernel "2.0.0"]
                                   [org.neo4j/neo4j-kernel "2.0.0"
                                    :classifier "tests"]
                                   [org.neo4j/neo4j-cypher "2.0.0"]
                                   [org.clojure/core.async "0.1.267.0-0d7780-alpha"]]}}
-  :plugins [[lein-cljsbuild "1.0.1"]]
+  :plugins [[lein-cljsbuild "1.0.1"]
+            [lein-ring "0.8.7"]]
   :cljsbuild {
     :builds [{:source-paths ["src/cljs"]
               :compiler {:output-to "resources/public/js/main.js"
                          :optimizations :whitespace
                          :pretty-print true}}]}
+  :ring {:handler gitgene.routes/app}
   :main gitgene.core)
