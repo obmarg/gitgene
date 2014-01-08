@@ -1,4 +1,4 @@
-(ns stubbly.core-test
+(ns gitgene.core-test
   (:use midje.sweet
-        stubbly.core)
+        gitgene.core)
   (:require [clojure.string]))

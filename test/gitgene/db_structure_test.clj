@@ -1,4 +1,4 @@
-(ns stubbly.db-structure-test
+(ns gitgene.db-structure-test
   (:use midje.sweet
         [clojure.walk :only [keywordize-keys]])
   (:import [org.neo4j.test TestGraphDatabaseFactory]

@@ -1,4 +1,4 @@
-# stubbly
+# gitgene
 
 A toy project to produce interesting statistics from a git repository, possibly
 using a graph database.
@@ -11,7 +11,7 @@ TODO: Fill this in
 
 FIXME: explanation
 
-    $ java -jar stubbly-0.1.0-standalone.jar [args]
+    $ java -jar gitgene-0.1.0-standalone.jar [args]
 
 ## Options
 

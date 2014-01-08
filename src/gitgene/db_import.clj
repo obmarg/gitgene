@@ -1,4 +1,4 @@
-(ns stubbly.db-import
+(ns gitgene.db-import
   (:require [clojure.string :as string]
             [clojurewerkz.neocons.rest.nodes :as nn]
             [clojurewerkz.neocons.rest.relationships :as nrel]

@@ -1,6 +1,6 @@
-(ns stubbly.git-test
+(ns gitgene.git-test
   (:use midje.sweet
-        stubbly.git)
+        gitgene.git)
   (:require [clojure.string]))
 
 (def ^:private test-diff

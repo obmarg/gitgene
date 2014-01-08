@@ -1,4 +1,4 @@
-(ns stubbly.levenshtein)
+(ns gitgene.levenshtein)
 
 (declare make-matrix distance-reducer print-matrix)
 

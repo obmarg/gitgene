@@ -1,6 +1,6 @@
-(ns stubbly.levenshtein-test
+(ns gitgene.levenshtein-test
   (:use midje.sweet
-        stubbly.levenshtein)
+        gitgene.levenshtein)
   (:require [clojure.string]))
 
 (fact

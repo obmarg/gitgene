@@ -1,4 +1,4 @@
-(ns stubbly.git
+(ns gitgene.git
   (:use [clj-jgit.porcelain :only [load-repo git-log]]
         [clj-jgit.querying :only [changed-files rev-list commit-info
                                   commit-info-without-branches
@@ -11,7 +11,7 @@
            [org.eclipse.jgit.revwalk RevCommit]
            [org.eclipse.jgit.treewalk EmptyTreeIterator CanonicalTreeParser])
   (:require [clojure.string]
-            [stubbly.levenshtein :as levenshtien]))
+            [gitgene.levenshtein :as levenshtien]))
 
 (declare diff-for-commit diff-split-with)
 
@@ -167,6 +167,6 @@
          (map (juxt extract-metadata rev->lines) (repeat repo)))))
 
 ;(import-repo repo-path)
-;(import-repo "/Users/grambo/src/stubbly")
+;(import-repo "/Users/grambo/src/gitgene")
 
 ;(commit-info repo (first (.getParents (find-rev-commit repo (new-rev-walk repo) "c39e7d"))))
