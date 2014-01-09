@@ -11,7 +11,8 @@
                  [compojure "1.1.6"]
                  [org.clojure/clojurescript "0.0-2138"]
                  [ring "1.2.1"]
-                 [hiccup "1.0.4"]]
+                 [hiccup "1.0.4"]
+                 [om "0.1.5"]]
   :profiles {:dev {:dependencies [[midje "1.5.1"]
                                   #_[org.neo4j/neo4j-kernel "2.0.0"]
                                   [org.neo4j/neo4j-kernel "2.0.0"
@@ -23,7 +24,9 @@
   :cljsbuild {
     :builds [{:source-paths ["src/cljs"]
               :compiler {:output-to "resources/public/js/main.js"
-                         :optimizations :whitespace
-                         :pretty-print true}}]}
+                         :output-dir "out"
+                         :optimizations :none
+                         :pretty-print true
+                         :source-map true}}]}
   :ring {:handler gitgene.routes/app}
   :main gitgene.core)
