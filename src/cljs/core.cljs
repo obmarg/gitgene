@@ -1,6 +1,7 @@
 (ns gitgene.core
   (:require [om.core :as om :include-macros true]
-            [om.dom :as dom :include-macros true]))
+            [om.dom :as dom :include-macros true]
+            [shoreleave.remotes.http-rpc :as rpc]))
 
 (defn
   widget [data]
@@ -25,5 +26,7 @@
 
 (def app-state (atom {:headers ["test" "test 2"]
                       :rows [["1" "2"] ["3" "4"]]}))
+
+(rpc/remote-callback :remote-fn [2] #(js/alert %))
 
 (om/root app-state table (.getElementById js/document "app"))

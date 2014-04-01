@@ -12,7 +12,9 @@
                  [org.clojure/clojurescript "0.0-2138"]
                  [ring "1.2.1"]
                  [hiccup "1.0.4"]
-                 [om "0.1.5"]]
+                 [om "0.1.5"]
+                 [com.cemerick/shoreleave-remote-ring "0.0.2"]
+                 [shoreleave/shoreleave-remote "0.3.0"]]
   :profiles {:dev {:dependencies [[midje "1.5.1"]
                                   #_[org.neo4j/neo4j-kernel "2.0.0"]
                                   [org.neo4j/neo4j-kernel "2.0.0"
